@@ -4,10 +4,12 @@
 
 | Input | Required | Default | Description |
 |---|---|---|---|
-| `model` | Yes | — | Model to use. Format: `provider/model-id`. See [Models](#models). |
-| `use_github_token` | No | `false` | Use the workflow's `GITHUB_TOKEN` to post comments. Set to `true` for most setups. |
-| `agent` | No | `build` | OpenCode agent to use. Must be a primary agent. |
-| `share` | No | `true` for public repos | Whether to share the OpenCode session publicly. |
+| `model` | No | `anthropic/claude-sonnet-4-5` | Model to use. Format: `provider/model-id`. See [Models](#models). |
+| `anthropic_api_key` | No* | — | Anthropic API key. Required when using an Anthropic model. |
+| `github_token` | Yes | — | GitHub token for posting review comments. Use `${{ secrets.GITHUB_TOKEN }}`. |
+
+*Required if using any Anthropic model (the default). Substitute the appropriate input
+for other providers — see [Models](#models).
 
 ## Required secrets
 
@@ -131,12 +133,10 @@ jobs:
           persist-credentials: false
 
       - uses: stephengolub/code-reviewer@v1
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           model: anthropic/claude-sonnet-4-5
-          use_github_token: true
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ## Version pinning

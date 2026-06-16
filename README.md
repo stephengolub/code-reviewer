@@ -53,12 +53,10 @@ jobs:
           persist-credentials: false
 
       - uses: stephengolub/code-reviewer@v1
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           model: anthropic/claude-sonnet-4-5
-          use_github_token: true
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ### 2. Add your API key
@@ -136,6 +134,9 @@ alter your review behavior:
 
 ```yaml
 - uses: stephengolub/code-reviewer@v1
+  with:
+    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+    github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ## License

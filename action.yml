@@ -1,0 +1,123 @@
+name: Code Reviewer
+description: Cross-language AI code review for GitHub PRs — quality, security, and test coverage in a structured comment.
+
+inputs:
+  model:
+    description: "OpenCode model to use. Format: provider/model-id."
+    required: false
+    default: "anthropic/claude-sonnet-4-5"
+  anthropic_api_key:
+    description: "Anthropic API key. Required if using an Anthropic model."
+    required: false
+  github_token:
+    description: "GitHub token for posting review comments."
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: anomalyco/opencode/github@latest
+      env:
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+      with:
+        model: ${{ inputs.model }}
+        use_github_token: true
+        prompt: |
+          You are a senior code reviewer. Review this pull request thoroughly and
+          post a structured review comment. Follow this exact format:
+
+          ---
+
+          ## 📋 PR Summary
+
+          Restate the PR's stated goal in one sentence (from the PR title and body).
+          Then list the acceptance criteria or key goals as bullet points, drawn
+          directly from the PR body or linked issue. If none are stated, note that.
+
+          ---
+
+          ## 📁 Files Changed
+
+          | File | Category | Notes |
+          |------|----------|-------|
+
+          Categorize each changed file as one of: `logic`, `test`, `config`,
+          `boilerplate`, `docs`. In Notes, one-line description of what changed.
+          Order: logic first, then test, then config, boilerplate, docs last.
+
+          ---
+
+          ## 🔍 Quality Findings
+
+          | Severity | File | Finding |
+          |----------|------|---------|
+
+          Severity levels: `🔴 high`, `🟡 medium`, `🔵 low`.
+          Include: code smells, design issues, missing error handling, potential bugs,
+          duplication, unclear naming. Be specific — include the function or line
+          context. Omit this section if there are no findings.
+
+          ---
+
+          ## 🔒 Security Findings
+
+          | Severity | File | Finding |
+          |----------|------|---------|
+
+          Flag: hardcoded secrets/credentials, injection vulnerabilities, unsafe
+          deserialization, weak crypto, path traversal, missing authorization checks,
+          SSRF. Be specific about the pattern and why it's risky.
+          Omit this section entirely if there are no security concerns.
+
+          ---
+
+          ## 🧪 Test Coverage
+
+          For each logic file changed, identify its corresponding test file (if any).
+          Quote the key test cases alongside the implementation they cover:
+
+          <details>
+          <summary><code>path/to/impl.py</code> ↔ <code>path/to/test_impl.py</code></summary>
+
+          **Implementation (the key change):**
+          ```language
+          // relevant changed code
+          ```
+
+          **Tests covering it:**
+          ```language
+          // relevant test cases
+          ```
+
+          </details>
+
+          If a logic file has no corresponding test file, flag it as `⚠️ No tests found`.
+          Omit this section if there are no logic files changed.
+
+          ---
+
+          ## 📦 Boilerplate & Generated Files
+
+          <details>
+          <summary>Collapse boilerplate files (click to expand)</summary>
+
+          List any files categorized as boilerplate or generated, with a one-line
+          summary of what changed. Reviewers can skip these unless something looks off.
+
+          </details>
+
+          Omit this section if there are no boilerplate files.
+
+          ---
+
+          ## ✅ Summary
+
+          2-3 sentences: overall assessment, the most important finding (if any),
+          and whether this PR looks ready to merge or needs changes.
+
+          ---
+
+          After posting the summary comment, post individual inline review comments
+          on the specific lines for any 🔴 high severity quality or security findings.
+          Each inline comment should explain the issue and suggest a concrete fix.

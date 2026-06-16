@@ -337,6 +337,34 @@ export function toMermaid(defs, edges) {
 }
 
 // ---------------------------------------------------------------------------
+// toMermaidLiveUrl
+// ---------------------------------------------------------------------------
+
+/**
+ * Encode a Mermaid diagram string as a mermaid.live URL.
+ * mermaid.live uses base64url-encoded JSON: { code, mermaid: { theme } }
+ *
+ * @param {string} mermaid
+ * @returns {string}  Full https://mermaid.live/view#... URL
+ */
+export function toMermaidLiveUrl(mermaid) {
+  const payload = JSON.stringify({
+    code: mermaid,
+    mermaid: { theme: "default" },
+    updateEditor: false,
+    autoSync: true,
+    updateDiagram: true,
+  });
+  // Base64url encoding (URL-safe, no padding)
+  const encoded = Buffer.from(payload)
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+  return `https://mermaid.live/view#base64:${encoded}`;
+}
+
+// ---------------------------------------------------------------------------
 // buildCallGraph — public API
 // ---------------------------------------------------------------------------
 
@@ -344,7 +372,7 @@ export function toMermaid(defs, edges) {
  * Build a Mermaid call graph from a list of changed files.
  *
  * @param {{ path: string, content: string }[]} files
- * @returns {Promise<string>}
+ * @returns {Promise<{ mermaid: string, url: string }>}
  */
 export async function buildCallGraph(files) {
   const allDefs = [];
@@ -368,7 +396,8 @@ export async function buildCallGraph(files) {
   }
 
   if (!anySupported) {
-    return "graph TD\n    _unsupported[\"No supported files in diff\"]";
+    const mermaid = "graph TD\n    _unsupported[\"No supported files in diff\"]";
+    return { mermaid, url: toMermaidLiveUrl(mermaid) };
   }
 
   // Deduplicate edges across files
@@ -380,7 +409,8 @@ export async function buildCallGraph(files) {
     return true;
   });
 
-  return toMermaid(allDefs, dedupedEdges);
+  const mermaid = toMermaid(allDefs, dedupedEdges);
+  return { mermaid, url: toMermaidLiveUrl(mermaid) };
 }
 
 // ---------------------------------------------------------------------------
@@ -402,8 +432,9 @@ if (isMain) {
     content: readFileSync(p, "utf8"),
   }));
 
-  buildCallGraph(files).then((mermaid) => {
+  buildCallGraph(files).then(({ mermaid, url }) => {
     console.log(mermaid);
+    console.error(`mermaid.live: ${url}`);
   }).catch((err) => {
     console.error(err);
     process.exit(1);

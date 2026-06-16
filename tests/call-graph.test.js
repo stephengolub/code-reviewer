@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Lazy import so tests describe() before the module is loaded
-let buildCallGraph, extractDefinitions, extractEdges, toMermaid;
+let buildCallGraph, extractDefinitions, extractEdges, toMermaid, toMermaidLiveUrl;
 
 before(async () => {
   const mod = await import("../src/call-graph.js");
@@ -15,6 +15,7 @@ before(async () => {
   extractDefinitions = mod.extractDefinitions;
   extractEdges = mod.extractEdges;
   toMermaid = mod.toMermaid;
+  toMermaidLiveUrl = mod.toMermaidLiveUrl;
 });
 
 const fixture = (name) =>
@@ -215,31 +216,63 @@ describe("toMermaid", () => {
 });
 
 // ---------------------------------------------------------------------------
+// toMermaidLiveUrl
+// ---------------------------------------------------------------------------
+
+describe("toMermaidLiveUrl", () => {
+  it("returns a mermaid.live URL", () => {
+    const mermaid = "graph TD\n    A --> B";
+    const url = toMermaidLiveUrl(mermaid);
+    assert.ok(url.startsWith("https://mermaid.live/view#base64:"), "should be a mermaid.live URL");
+  });
+
+  it("URL decodes back to the original diagram", () => {
+    const mermaid = "graph TD\n    foo[\"foo()\"] --> bar[\"bar()\"]";
+    const url = toMermaidLiveUrl(mermaid);
+    const encoded = url.split("#base64:")[1];
+    // Restore base64 padding
+    const padded = encoded.replace(/-/g, "+").replace(/_/g, "/");
+    const pad = padded.length % 4 === 0 ? "" : "=".repeat(4 - (padded.length % 4));
+    const decoded = JSON.parse(Buffer.from(padded + pad, "base64").toString("utf8"));
+    assert.equal(decoded.code, mermaid);
+  });
+
+  it("produces different URLs for different diagrams", () => {
+    const url1 = toMermaidLiveUrl("graph TD\n    A --> B");
+    const url2 = toMermaidLiveUrl("graph TD\n    X --> Y");
+    assert.notEqual(url1, url2);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // buildCallGraph — integration
 // ---------------------------------------------------------------------------
 
 describe("buildCallGraph — integration", () => {
-  it("returns a Mermaid string for a Python file", async () => {
+  it("returns mermaid and url for a Python file", async () => {
     const source = fixture("latency_report.py");
     const result = await buildCallGraph([{ path: "scripts/latency_report.py", content: source }]);
-    assert.ok(typeof result === "string", "should return a string");
-    assert.ok(result.includes("graph TD"), "should be valid Mermaid");
-    assert.ok(result.includes("main"), "should include main");
-    assert.ok(result.includes("compute_stats"), "should include compute_stats");
+    assert.ok(typeof result === "object", "should return an object");
+    assert.ok(result.mermaid.includes("graph TD"), "mermaid should be valid");
+    assert.ok(result.mermaid.includes("main"), "should include main");
+    assert.ok(result.mermaid.includes("compute_stats"), "should include compute_stats");
+    assert.ok(result.url.startsWith("https://mermaid.live/"), "should include a url");
   });
 
-  it("returns a Mermaid string for a TypeScript file", async () => {
+  it("returns mermaid and url for a TypeScript file", async () => {
     const source = fixture("simple.ts");
     const result = await buildCallGraph([{ path: "src/simple.ts", content: source }]);
-    assert.ok(result.includes("graph TD"));
-    assert.ok(result.includes("greet"));
+    assert.ok(result.mermaid.includes("graph TD"));
+    assert.ok(result.mermaid.includes("greet"));
+    assert.ok(result.url.startsWith("https://mermaid.live/"));
   });
 
-  it("returns a Mermaid string for a Rust file", async () => {
+  it("returns mermaid and url for a Rust file", async () => {
     const source = fixture("simple.rs");
     const result = await buildCallGraph([{ path: "src/simple.rs", content: source }]);
-    assert.ok(result.includes("graph TD"));
-    assert.ok(result.includes("main"));
+    assert.ok(result.mermaid.includes("graph TD"));
+    assert.ok(result.mermaid.includes("main"));
+    assert.ok(result.url.startsWith("https://mermaid.live/"));
   });
 
   it("handles multiple files in one graph", async () => {
@@ -249,13 +282,16 @@ describe("buildCallGraph — integration", () => {
       { path: "scripts/latency_report.py", content: py },
       { path: "src/simple.ts", content: ts },
     ]);
-    assert.ok(result.includes("graph TD"));
-    assert.ok(result.includes("main"));
-    assert.ok(result.includes("greet"));
+    assert.ok(result.mermaid.includes("graph TD"));
+    assert.ok(result.mermaid.includes("main"));
+    assert.ok(result.mermaid.includes("greet"));
+    assert.ok(result.url.startsWith("https://mermaid.live/"));
   });
 
-  it("returns a fallback message for unsupported file types", async () => {
+  it("returns a fallback for unsupported file types", async () => {
     const result = await buildCallGraph([{ path: "config.yml", content: "foo: bar" }]);
-    assert.ok(typeof result === "string");
+    assert.ok(typeof result === "object");
+    assert.ok(typeof result.mermaid === "string");
+    assert.ok(typeof result.url === "string");
   });
 });

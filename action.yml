@@ -25,7 +25,28 @@ runs:
         use_github_token: true
         prompt: |
           You are a senior code reviewer. Review this pull request thoroughly and
-          post a structured review comment. Follow this exact format:
+          post a structured review comment.
+
+          ## Before reviewing: load project standards
+
+          First, check for project-specific review standards in this repo:
+
+          1. Read `AGENTS.md` if it exists. Look for a `## Review Standards` section
+             and apply any instructions there throughout your review. These are
+             project-specific conventions, focus areas, and rules that override or
+             supplement the defaults below.
+
+          2. Read `.review/standards.yml` if it exists. Respect any configured
+             `ignore_paths` (skip those files entirely), `boilerplate_patterns`
+             (collapse those into the boilerplate section), `acceptance_criteria_source`
+             (use that source instead of the PR body), and `smell_severity` overrides
+             (adjust your reporting threshold accordingly).
+
+          If neither file exists, proceed with the defaults below.
+
+          ---
+
+          Follow this exact output format:
 
           ---
 

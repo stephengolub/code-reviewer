@@ -16,6 +16,44 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "22"
+
+    - name: Install call-graph dependencies
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: npm ci --omit=dev
+
+    - name: Generate call graph
+      id: call_graph
+      shell: bash
+      run: |
+        # Get changed source files (Python, TypeScript, Rust only)
+        CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git diff --name-only origin/${{ github.base_ref }}...HEAD 2>/dev/null || echo "")
+        FILES=$(echo "$CHANGED" | grep -E '\.(py|ts|tsx|js|jsx|rs)$' | grep -v 'node_modules' || true)
+
+        if [ -z "$FILES" ]; then
+          echo "mermaid=graph TD\n    _empty[\"No supported source files changed\"]" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        # Run the call-graph generator
+        MERMAID=$(node ${{ github.action_path }}/src/call-graph.js $FILES 2>/dev/null || echo "")
+
+        if [ -z "$MERMAID" ]; then
+          echo "mermaid=graph TD\n    _empty[\"Call graph unavailable\"]" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        # Write multiline output using heredoc syntax
+        {
+          echo "mermaid<<MERMAID_EOF"
+          echo "$MERMAID"
+          echo "MERMAID_EOF"
+        } >> $GITHUB_OUTPUT
+
     - uses: anomalyco/opencode/github@latest
       env:
         ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
@@ -46,6 +84,18 @@ runs:
 
           ---
 
+          ## Call graph (pre-computed)
+
+          The following Mermaid diagram shows the call relationships between functions
+          in the changed files. Use it to understand the structure of the change before
+          reading the diff line by line. Include it verbatim in your review comment
+          inside a fenced ```mermaid block under a "## 📊 Call Graph" section,
+          positioned after the Files Changed table.
+
+          ${{ steps.call_graph.outputs.mermaid }}
+
+          ---
+
           Follow this exact output format:
 
           ---
@@ -66,6 +116,13 @@ runs:
           Categorize each changed file as one of: `logic`, `test`, `config`,
           `boilerplate`, `docs`. In Notes, one-line description of what changed.
           Order: logic first, then test, then config, boilerplate, docs last.
+
+          ---
+
+          ## 📊 Call Graph
+
+          Render the pre-computed call graph here as a fenced ```mermaid block.
+          Do not modify it — render it exactly as provided above.
 
           ---
 

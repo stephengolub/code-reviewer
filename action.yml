@@ -77,11 +77,30 @@ runs:
         use_github_token: true
         prompt: |
           You are a senior code reviewer. Review this pull request thoroughly and
-          post a structured review comment.
+          maintain a single up-to-date review comment — do not post multiple comments.
 
-          ## Before reviewing: load project standards
+          ---
 
-          First, check for project-specific review standards in this repo:
+          ## STEP 1: Find or create the review comment (do this first)
+
+          This reviewer runs on every push. You must maintain ONE comment per PR,
+          updating it in place rather than posting a new one each time.
+
+          Run this command to find an existing review comment:
+
+          gh api repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments \
+            --jq '.[] | select(.body | contains("<!-- code-reviewer:summary -->")) | .id'
+
+          - If it returns a comment ID: you will PATCH that comment at the end.
+          - If it returns nothing: you will POST a new comment at the end.
+
+          Do NOT post or edit anything yet. Just note the ID (or absence of one).
+
+          ---
+
+          ## STEP 2: Load project standards
+
+          Check for project-specific review standards in this repo:
 
           1. Read `AGENTS.md` if it exists. Look for a `## Review Standards` section
              and apply any instructions there throughout your review. These are
@@ -98,29 +117,14 @@ runs:
 
           ---
 
-          ## Call graph (pre-computed)
+          ## STEP 3: Compose the review
 
-          The following Mermaid diagram shows the call relationships between functions
-          in the changed files. Use it to understand the structure of the change before
-          reading the diff line by line.
+          Write the complete review body using this exact format. The comment body
+          MUST start with the hidden marker on the very first line — this is how the
+          next run finds and updates it.
 
-          Include it in your review comment under a "## 📊 Call Graph" section,
-          positioned after the Files Changed table, using this exact format:
-
-          ## 📊 Call Graph
-
-          > 🔍 [Open full interactive diagram on mermaid.live](${{ steps.call_graph.outputs.url }})
-
-          ```mermaid
-          <diagram here>
-          ```
-
-          Mermaid source:
-          ${{ steps.call_graph.outputs.mermaid }}
-
-          ---
-
-          Follow this exact output format:
+          <!-- code-reviewer:summary -->
+          _Last reviewed: commit `${{ github.event.pull_request.head.sha }}` · ${{ github.event.pull_request.updated_at }}_
 
           ---
 
@@ -145,32 +149,36 @@ runs:
 
           ## 📊 Call Graph
 
-          Render the pre-computed call graph here as a fenced ```mermaid block.
-          Do not modify it — render it exactly as provided above.
+          > 🔍 [Open full interactive diagram on mermaid.live](${{ steps.call_graph.outputs.url }})
+
+          ```mermaid
+          ${{ steps.call_graph.outputs.mermaid }}
+          ```
 
           ---
 
           ## 🔍 Quality Findings
 
-          | Severity | File | Finding |
-          |----------|------|---------|
+          | Severity | File:Line | Finding |
+          |----------|-----------|---------|
 
           Severity levels: `🔴 high`, `🟡 medium`, `🔵 low`.
           Include: code smells, design issues, missing error handling, potential bugs,
-          duplication, unclear naming. Be specific — include the function or line
-          context. Omit this section if there are no findings.
+          duplication, unclear naming. Be specific — reference the exact file and line
+          number as `path/to/file.py:42` (GitHub auto-links these to the diff).
+          Omit this section if there are no findings.
 
           ---
 
           ## 🔒 Security Findings
 
-          | Severity | File | Finding |
-          |----------|------|---------|
+          | Severity | File:Line | Finding |
+          |----------|-----------|---------|
 
           Flag: hardcoded secrets/credentials, injection vulnerabilities, unsafe
           deserialization, weak crypto, path traversal, missing authorization checks,
-          SSRF. Be specific about the pattern and why it's risky.
-          Omit this section entirely if there are no security concerns.
+          SSRF. Reference exact `file:line`. Be specific about the pattern and why it
+          is risky. Omit this section entirely if there are no security concerns.
 
           ---
 
@@ -220,9 +228,22 @@ runs:
 
           ---
 
-          After posting the summary comment, post individual inline review comments
-          on the specific lines for any 🔴 high severity quality or security findings.
-          Each inline comment should explain the issue and suggest a concrete fix.
+          ## STEP 4: Post or update the comment
+
+          Write the complete review body to a temp file, then:
+
+          If you found an existing comment ID in STEP 1:
+            gh api --method PATCH \
+              repos/${{ github.repository }}/issues/comments/<ID> \
+              -F body=@/tmp/review-body.md
+
+          If no existing comment was found:
+            gh api --method POST \
+              repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments \
+              -F body=@/tmp/review-body.md
+
+          Do NOT post inline line-anchored comments. All findings live in the tables
+          above with file:line references.
 
     - name: Prepare review artifacts
       if: always()

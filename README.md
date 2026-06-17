@@ -122,6 +122,28 @@ password = "hunter2"  # review-ignore: HARDCODED_SECRET — test fixture, not pr
 The finding is demoted from ❌ to ⚠️ acknowledged and logged visibly in the review
 comment. It is never silently hidden.
 
+## Iterative reviews
+
+The reviewer runs on every push to a PR. Rather than accumulating a new comment on
+each run, it maintains a **single comment that updates in place**.
+
+On each run the reviewer:
+1. Searches the PR's comments for one containing a hidden `<!-- code-reviewer:summary -->` marker
+2. If found — edits that comment with the fresh review (reflecting the latest commit)
+3. If not found — creates a new comment with the marker embedded
+
+The comment shows which commit it last reviewed:
+
+> _Last reviewed: commit `abc1234` · 2026-06-17T..._
+
+This means you always see one clean, current review rather than a stack of stale ones.
+The review reflects the state of the latest push; GitHub's comment edit history
+preserves all prior versions if you need to compare.
+
+**All findings (quality and security) are in the summary tables** with `file:line`
+references that GitHub auto-links to the diff — no separate inline comments that
+orphan when lines move.
+
 ## Models
 
 The default model is `anthropic/claude-sonnet-4-5`. Any model supported by OpenCode

@@ -215,54 +215,27 @@ export const CodeReviewerPlugin = async (ctx) => {
     },
 
     // -------------------------------------------------------------------------
-    // Agent registration (bonus — unofficial cfg.agent mutation)
-    // Degrades gracefully: if this hook is ignored, the tool + skill still work.
+    // Command registration via cfg.command mutation.
+    // The command is a THIN pointer to the code-review skill — the skill is the
+    // single source of truth for all review behavior, preventing voice drift.
     // -------------------------------------------------------------------------
     config: async (cfg) => {
       try {
-        cfg.agent ??= {};
-        // Only register if not already defined (don't override user customization)
-        cfg.agent["code-reviewer"] ??= {
-          description:
-            "Interactive code review — augments your reading of a diff conversationally. " +
-            "Has access to the call_graph tool for structural analysis.",
-          mode: "primary",
-          tools: {
-            read: true,
-            glob: true,
-            grep: true,
-            bash: true,
-            webfetch: true,
-            lsp: true,
-            skill: true,
-          },
-          prompt: `You are an interactive code reviewer helping the user read and understand a diff.
+        cfg.command ??= {};
+        // Only register if not already defined — don't override user customization
+        cfg.command["code-review"] ??= {
+          description: "Review changes [path|commit|branch|PR/MR URL], defaults to uncommitted",
+          template: `Load the \`code-review\` skill first, then perform the review.
 
-Your style:
-- Use "I" statements: "If it were me...", "I wonder if..."
-- Frame findings as questions, not directives
-- Be concise and focused — no flattery, no "strengths" sections
-- Only flag things you're confident about; investigate before asserting
-- Reference real line numbers from actual files (use the read tool)
-- Review only the changes, not pre-existing code unless it's directly relevant
+The skill is the single source of truth for all review behavior: diff source
+detection, project standards loading, PR/MR state-awareness, the call_graph
+tool, and review voice. Follow it completely.
 
-You have access to the call_graph tool. Use it when:
-- The user asks about code structure or call relationships
-- A change touches more than 2 functions and the structure would help understanding
-- The user asks "what calls this" or "what does this affect"
-
-When generating a call graph, present:
-1. The Mermaid diagram in a fenced \`\`\`mermaid block (renders in supporting terminals)
-2. The mermaid.live link for full interactive viewing
-
-Before reviewing, check for project standards:
-- Read AGENTS.md if it exists (look for ## Review Standards)
-- Read .review/standards.yml if it exists
-
-Load the code-review skill for full review workflow guidance.`,
+Review target: $ARGUMENTS`,
         };
       } catch {
-        // cfg mutation not supported in this version — degrade gracefully
+        // cfg mutation not supported in this version — degrade gracefully.
+        // The tool and skill still function without the bundled command.
       }
     },
   };

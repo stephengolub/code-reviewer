@@ -176,29 +176,50 @@ describe("CodeReviewerPlugin — structure", () => {
     assert.ok(typeof plugin.config === "function", "should have a config hook");
   });
 
-  it("config hook registers code-reviewer agent without crashing", async () => {
+  it("config hook registers code-review command", async () => {
     const { CodeReviewerPlugin } = await import("../src/index.js");
     const plugin = await CodeReviewerPlugin({});
     const cfg = {};
     await plugin.config(cfg);
-    assert.ok(cfg.agent?.["code-reviewer"], "should register code-reviewer agent");
-    assert.ok(typeof cfg.agent["code-reviewer"].prompt === "string", "agent should have a prompt");
-    // tools values must be booleans, not strings — OpenCode rejects "allow"/"deny"
-    const tools = cfg.agent["code-reviewer"].tools;
-    if (tools) {
-      for (const [key, val] of Object.entries(tools)) {
-        assert.equal(typeof val, "boolean", `tools.${key} must be a boolean, got ${typeof val} ("${val}")`);
-      }
-    }
+    assert.ok(cfg.command?.["code-review"], "should register code-review command");
+    assert.ok(
+      typeof cfg.command["code-review"].template === "string",
+      "command should have a template"
+    );
+    assert.ok(
+      cfg.command["code-review"].template.includes("code-review"),
+      "template should reference the code-review skill"
+    );
+    assert.ok(
+      cfg.command["code-review"].template.includes("$ARGUMENTS"),
+      "template should include $ARGUMENTS placeholder"
+    );
+    assert.ok(
+      typeof cfg.command["code-review"].description === "string",
+      "command should have a description"
+    );
   });
 
-  it("config hook does not overwrite a pre-existing code-reviewer agent", async () => {
+  it("config hook does not overwrite a pre-existing code-review command", async () => {
     const { CodeReviewerPlugin } = await import("../src/index.js");
     const plugin = await CodeReviewerPlugin({});
-    const existing = { description: "my custom agent", mode: "primary", prompt: "custom" };
-    const cfg = { agent: { "code-reviewer": existing } };
+    const existing = { template: "my custom review", description: "custom" };
+    const cfg = { command: { "code-review": existing } };
     await plugin.config(cfg);
-    assert.equal(cfg.agent["code-reviewer"], existing,
-      "should not overwrite an existing agent definition");
+    assert.equal(
+      cfg.command["code-review"], existing,
+      "should not overwrite an existing command definition"
+    );
+  });
+
+  it("config hook does not register an agent", async () => {
+    const { CodeReviewerPlugin } = await import("../src/index.js");
+    const plugin = await CodeReviewerPlugin({});
+    const cfg = {};
+    await plugin.config(cfg);
+    assert.ok(
+      !cfg.agent?.["code-reviewer"],
+      "should not register a code-reviewer agent"
+    );
   });
 });

@@ -1,28 +1,42 @@
 # code-reviewer
 
-A cross-language AI code review standard for GitHub PRs. Drop one workflow file into
-any repo and get structured, augmented code review on every pull request — covering
-quality findings, security issues, test coverage, and boilerplate triage — powered by
-OpenCode. Works with any model provider OpenCode supports.
+A **code comprehension tool** for pull requests. It helps the human reviewer understand
+a change faster — then offers advisory notes they can take or leave. It does not replace
+the reviewer or gate the merge. You stay in the driver's seat; the tool helps you read.
 
-Works out of the box for **Python, TypeScript, and Rust**. Extends to any language
-OpenCode's LSP supports.
+Powered by OpenCode. Works with any model provider. Out of the box for **Python,
+TypeScript, and Rust**; extends to any language OpenCode's LSP supports.
 
-## What it does
+## The idea
 
-On every PR, it posts a structured review comment containing:
+Reviewing agent-generated diffs and other people's PRs is mostly a *reading* problem:
+holding the changed call paths in your head, separating real logic from boilerplate,
+finding the tests, knowing what a change ripples into. This tool decorates the diff so
+that reading is faster — and surfaces things worth a closer look as advisory notes, not
+verdicts.
 
-- **PR summary** — restated goals and acceptance criteria at the top
-- **Files changed table** — categorized as logic / test / config / boilerplate, ordered
-  core-logic first
-- **Quality findings** — code smells, design issues, potential bugs, duplication
-- **Security findings** — hardcoded secrets, injection, missing auth, weak crypto, and
-  more (always on, can't be disabled)
-- **Test co-location** — each changed logic file paired with its tests, quoted
-  side-by-side
-- **Boilerplate collapse** — generated/boilerplate files collapsed into a `<details>`
-  block so they don't dominate the review
-- **Inline comments** — high-severity findings anchored to the specific lines
+## What it gives you
+
+On every PR, it posts a comment built to aid comprehension:
+
+- **Call graph** — a Mermaid diagram of how the changed functions call each other, so
+  you see the *shape* of the change before reading a line. Cross-language (Python,
+  TypeScript, Rust) via tree-sitter. Includes a mermaid.live link for full interactive
+  viewing. This is the headline feature — nothing else in the PR tooling space does this.
+- **PR summary** — what the change does in plain language, plus its stated goals
+- **Files changed table** — categorized logic / test / config / boilerplate, core-logic
+  first, so the real change isn't buried under generated files
+- **Test co-location** — each changed logic file paired with its tests, side-by-side,
+  so you don't have to hunt
+- **Boilerplate collapse** — generated and config files folded away so they don't
+  dominate reading
+- **Advisory notes** — things worth a closer look: potential bugs, security concerns,
+  missing tests, smells. Framed as a reviewer's notes ("worth checking…", "I'd look
+  at…"), not as pass/fail judgments. You decide what matters.
+
+Want to dig in interactively? The companion [OpenCode plugin](#interactive-comprehension-the-plugin)
+gives you the same call graph and comprehension skill as a conversational partner in
+your terminal — point it at any PR URL or local diff and ask questions.
 
 ## 5-minute setup
 
@@ -73,16 +87,17 @@ of supported providers and their environment variable names.
 
 That's it. Open a PR and the review runs automatically.
 
-## Customizing standards
+## Customizing what the tool notices
 
-The review has two tiers:
+The tool has two tiers of advisory notes:
 
-**Tier 1 — Security floor (always on, can't be disabled).** Flags hardcoded secrets,
-injection vulnerabilities, weak crypto, path traversal, missing authorization, and more.
-This runs regardless of your configuration.
+**Tier 1 — Security flags (always on, can't be disabled).** Always surfaces potential
+security concerns — hardcoded secrets, injection patterns, weak crypto, path traversal,
+missing authorization — so they're never silently skipped. Framed as flags for the
+reviewer to judge, not automatic rejections. You still decide.
 
-**Tier 2 — Loose baseline (fully overridable).** Default quality and style findings.
-Tune these to match your project's conventions.
+**Tier 2 — Comprehension baseline (fully overridable).** Default notes on code quality,
+structure, and test coverage. Tune these to match your project's conventions.
 
 ### Tune via `AGENTS.md`
 
@@ -117,16 +132,53 @@ smell_severity:
 
 See [docs/standards.md](docs/standards.md) for the full schema reference.
 
-### Suppress a security finding
+### Acknowledge a security flag
 
-If a Tier 1 security finding is a false positive, suppress it inline with a reason:
+If a Tier 1 flag is a false positive, acknowledge it inline with a reason — the flag
+stays visible in the review comment but is marked as noted:
 
 ```python
 password = "hunter2"  # review-ignore: HARDCODED_SECRET — test fixture, not production
 ```
 
-The finding is demoted from ❌ to ⚠️ acknowledged and logged visibly in the review
-comment. It is never silently hidden.
+The flag moves from ❌ to ⚠️ acknowledged, logged visibly. It is never silently hidden —
+it remains in the comment for reviewers to see.
+
+## Interactive comprehension: the plugin
+
+The companion OpenCode plugin brings the same comprehension tools into your local
+terminal as a conversational session — not a report, but a thinking partner.
+
+```
+/code-review https://github.com/owner/repo/pull/42
+/code-review                   # review current working-tree diff
+/code-review main..my-branch   # review a branch
+```
+
+In a session you can:
+- Ask "show me the call graph for these files" → gets a Mermaid diagram + mermaid.live link
+- Ask "what does this function affect?" → traces call paths via tree-sitter
+- Ask "walk me through the auth changes" → conversational, file by file
+- Ask "is this already discussed in the PR thread?" → loads existing comments first
+
+The plugin is the purest expression of comprehension-first: you read the diff at your
+own pace, the tool answers questions, and nothing is posted anywhere unless you ask.
+
+**Setup:** add to your `opencode.json`:
+
+```json
+{
+  "plugin": ["/path/to/code-reviewer/plugin"]
+}
+```
+
+Symlink the companion skill into your global config:
+
+```bash
+mkdir -p ~/.config/opencode/skills/code-review
+ln -sf /path/to/code-reviewer/plugin/skills/code-review/SKILL.md \
+       ~/.config/opencode/skills/code-review/SKILL.md
+```
 
 ## Iterative reviews
 

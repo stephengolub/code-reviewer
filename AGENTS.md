@@ -2,6 +2,29 @@
 
 Context and constraints for coding agents working in this repo.
 
+## Positioning: comprehension tool, not review bot
+
+**This is a code comprehension tool, not a PR review bot.** The distinction matters for
+every decision about what to build and how to frame output.
+
+The goal is to help a human reviewer *understand a change faster* — the call graph,
+the test co-location, the plain-language summary, the structure before the line-by-line
+reading. The tool surfaces advisory notes ("worth checking…") not verdicts ("this is
+wrong"). The reviewer decides what matters and whether to merge.
+
+This means:
+- The call graph is the headline feature, not a nice-to-have
+- Findings are framed as advisory ("I'd look at…"), never as pass/fail
+- Security flags are always-on because a reviewer shouldn't accidentally *miss* them,
+  not because the tool is a gatekeeper — the reviewer still judges
+- "Approve / Request changes" language does not belong in output
+- The local interactive plugin (conversational, question-answering) is as important as
+  the CI comment
+
+Do not drift toward bot-review framing. Claude Code review and Copilot do that already.
+The differentiator is comprehension: the call graph, the local interactive surface, the
+reading experience.
+
 ## What this repo is
 
 Two sibling surfaces sharing a core, not a single tool:

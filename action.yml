@@ -3,11 +3,29 @@ description: Cross-language AI code review for GitHub PRs — quality, security,
 
 inputs:
   model:
-    description: "OpenCode model to use. Format: provider/model-id."
+    description: >
+      OpenCode model to use. Format: provider/model-id.
+      See https://opencode.ai/docs/providers for all supported providers and model IDs.
     required: false
     default: "anthropic/claude-sonnet-4-5"
+  api_key:
+    description: >
+      API key for your chosen model provider. Use api_key_env_var to specify which
+      environment variable OpenCode should read it from (default: ANTHROPIC_API_KEY).
+      For a full list of provider env var names see https://opencode.ai/docs/providers.
+    required: false
+  api_key_env_var:
+    description: >
+      The environment variable name OpenCode uses to read the API key.
+      Defaults to ANTHROPIC_API_KEY. Set this when using a non-Anthropic provider,
+      e.g. OPENAI_API_KEY, GOOGLE_GENERATIVE_AI_API_KEY, GROQ_API_KEY.
+      See https://opencode.ai/docs/providers for the correct name per provider.
+    required: false
+    default: "ANTHROPIC_API_KEY"
   anthropic_api_key:
-    description: "Anthropic API key. Required if using an Anthropic model."
+    description: >
+      Anthropic API key. Shorthand for api_key + api_key_env_var=ANTHROPIC_API_KEY.
+      Kept for backward compatibility — prefer api_key + api_key_env_var for new setups.
     required: false
   github_token:
     description: "GitHub token for posting review comments."
@@ -68,9 +86,19 @@ runs:
         echo "$MERMAID" > /tmp/code-review-artifacts/call-graph.mmd
         echo "$URL" > /tmp/code-review-artifacts/call-graph-url.txt
 
+    - name: Set provider API key
+      shell: bash
+      run: |
+        # anthropic_api_key is the legacy shorthand — use it if set, otherwise
+        # fall back to the generic api_key input under its declared env var name.
+        if [ -n "${{ inputs.anthropic_api_key }}" ]; then
+          echo "ANTHROPIC_API_KEY=${{ inputs.anthropic_api_key }}" >> $GITHUB_ENV
+        elif [ -n "${{ inputs.api_key }}" ]; then
+          echo "${{ inputs.api_key_env_var }}=${{ inputs.api_key }}" >> $GITHUB_ENV
+        fi
+
     - uses: anomalyco/opencode/github@latest
       env:
-        ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
         GITHUB_TOKEN: ${{ inputs.github_token }}
       with:
         model: ${{ inputs.model }}

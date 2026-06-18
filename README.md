@@ -3,7 +3,7 @@
 A cross-language AI code review standard for GitHub PRs. Drop one workflow file into
 any repo and get structured, augmented code review on every pull request — covering
 quality findings, security issues, test coverage, and boilerplate triage — powered by
-OpenCode and Claude.
+OpenCode. Works with any model provider OpenCode supports.
 
 Works out of the box for **Python, TypeScript, and Rust**. Extends to any language
 OpenCode's LSP supports.
@@ -61,9 +61,15 @@ jobs:
 
 ### 2. Add your API key
 
-In your repo's **Settings → Secrets and variables → Actions**, add:
+In your repo's **Settings → Secrets and variables → Actions**, add the API key for
+your chosen model provider. The default model is `anthropic/claude-sonnet-4-5`, so the
+default secret name is `ANTHROPIC_API_KEY`.
 
-- `ANTHROPIC_API_KEY` — your Anthropic API key
+For other providers, set `api_key_env_var` to the correct environment variable name and
+store your key under that name in Actions secrets. OpenCode supports Anthropic, OpenAI,
+Google, Groq, and more — see the
+[OpenCode providers documentation](https://opencode.ai/docs/providers) for the full list
+of supported providers and their environment variable names.
 
 That's it. Open a PR and the review runs automatically.
 
@@ -146,8 +152,22 @@ orphan when lines move.
 
 ## Models
 
-The default model is `anthropic/claude-sonnet-4-5`. Any model supported by OpenCode
-works — see [docs/configuration.md](docs/configuration.md) for options.
+The default model is `anthropic/claude-sonnet-4-5`. Any model provider supported by
+OpenCode works. See the [OpenCode providers documentation](https://opencode.ai/docs/providers)
+for the full list of providers, model IDs, and their environment variable names.
+
+**Using a non-Anthropic provider:**
+
+```yaml
+- uses: stephengolub/code-reviewer@v1
+  with:
+    model: openai/gpt-4o
+    api_key: ${{ secrets.OPENAI_API_KEY }}
+    api_key_env_var: OPENAI_API_KEY
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+See [docs/configuration.md](docs/configuration.md) for all action inputs.
 
 ## Versioning
 
@@ -155,9 +175,19 @@ Pin to a major tag (`@v1`) rather than `@latest` so engine changes don't silentl
 alter your review behavior:
 
 ```yaml
+# Anthropic (default)
 - uses: stephengolub/code-reviewer@v1
   with:
+    model: anthropic/claude-sonnet-4-5
     anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+
+# Any other provider
+- uses: stephengolub/code-reviewer@v1
+  with:
+    model: <provider>/<model-id>
+    api_key: ${{ secrets.YOUR_PROVIDER_API_KEY }}
+    api_key_env_var: YOUR_PROVIDER_API_KEY_ENV_VAR
     github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
 

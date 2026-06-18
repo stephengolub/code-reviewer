@@ -1,0 +1,23 @@
+{
+  "name": "@stephengolub/code-reviewer-plugin",
+  "version": "0.1.0",
+  "description": "Interactive code review agent for OpenCode — call graph tool, companion skill, and review agent",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test tests/"
+  },
+  "keywords": ["opencode", "plugin", "code-review", "call-graph"],
+  "license": "MIT",
+  "dependencies": {
+    "@opencode-ai/plugin": "latest",
+    "web-tree-sitter": "0.24.0",
+    "tree-sitter-wasms": "^0.1.13"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0"
+  }
+}

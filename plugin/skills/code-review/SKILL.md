@@ -34,13 +34,36 @@ Based on how you were invoked:
 `git diff <branch>...HEAD`
 
 **GitHub PR URL** (`https://github.com/owner/repo/pull/N`):
-- `gh pr view <N> --repo owner/repo` — get title, body, labels
+- `gh pr view <N> --repo owner/repo --json state,mergedAt,title,body,labels` — get metadata **including state**
 - `gh pr diff <N> --repo owner/repo` — get the diff
 - `gh pr checkout <N> --repo owner/repo` — optional, to read actual files
 
 **GitLab MR URL** (`https://gitlab.com/group/repo/-/merge_requests/N`):
-- `glab mr view <N>` — get title, body
+- `glab mr view <N> --output json` — get metadata **including state**
 - `glab mr diff <N>` — get the diff
+
+## Step 1b: Check PR/MR state and frame accordingly
+
+After fetching PR/MR metadata, check the `state` field **before reviewing**.
+Behavior differs by state:
+
+**`OPEN`** — normal review. Proceed as a gating review.
+
+**`MERGED`** — reframe as retrospective immediately:
+> "This PR merged on <mergedAt>. I'll review it retrospectively — useful for
+> understanding what landed, but not for gating. Want me to continue?"
+>
+> Then proceed only if the user confirms. Frame all findings as "I would have
+> flagged..." not "you should change...". The `Recommendation` section becomes
+> "Retrospective note" not "Approve / Request changes".
+
+**`CLOSED` (not merged)** — reframe as archaeological:
+> "This PR was closed without merging. I can still review the diff — useful if
+> you're mining it for ideas or understanding why it was abandoned. Want me to
+> continue?"
+>
+> Then proceed only if the user confirms. Don't issue a recommendation (there's
+> nothing to gate). Note the abandoned state in the summary.
 
 ## Step 2: Load project standards
 

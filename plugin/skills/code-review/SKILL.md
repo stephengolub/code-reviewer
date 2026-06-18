@@ -109,21 +109,48 @@ correct given surrounding logic.
 
 ## Output format (for a full review)
 
+**Summary block** — one line describing the change, followed by a file overview table
+if more than two files changed:
+
 ```markdown
 ## Summary
 [One line: what this change does]
 
-## Findings
-
-### path/to/file.py:42
-[Finding — framed as a question or observation]
-
-```suggestion
-optional suggested fix
+| File | Lines | What changed |
+|------|-------|--------------|
+| `path/to/file.py` | 42–60 | [one-line description] |
 ```
 
-## Recommendation
-[Approve / Request changes / Discuss]
+**Each finding** uses this structure — the `---` separator, numbered title with inline
+location, blockquote for the key observation, then prose for context:
+
+```markdown
+---
+
+**1 · `path/to/file.py:42` — [short title, 4–6 words]**
+
+> [One sentence: the specific thing you noticed — the "so what"]
+
+[Prose: context, reasoning, question. 2–4 sentences max.]
+
+```suggestion
+optional concrete fix
+```
+```
+
+Rules:
+- The `---` hard-separates every finding — never skip it
+- The blockquote (`>`) is the key observation only — one sentence, not a paragraph
+- The numbered prefix (`1 ·`) lets you refer back in conversation ("re: finding 3")
+- The short title on the header line makes findings skimmable without reading prose
+- Keep prose to 2–4 sentences — if you need more, it's two findings
+
+**Recommendation** — use a blockquote for visual weight:
+
+```markdown
+---
+
+> **[Approve / Request changes / Discuss]** — [one sentence summary of the call]
 ```
 
 For quick conversational exchanges (user asks a specific question), skip the template

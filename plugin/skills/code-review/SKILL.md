@@ -34,13 +34,17 @@ Based on how you were invoked:
 `git diff <branch>...HEAD`
 
 **GitHub PR URL** (`https://github.com/owner/repo/pull/N`):
-- `gh pr view <N> --repo owner/repo --json state,mergedAt,title,body,labels` — get metadata **including state**
-- `gh pr diff <N> --repo owner/repo` — get the diff
+- `gh pr view <N> --repo owner/repo --json state,mergedAt,title,body,labels` — metadata + state
+- `gh pr diff <N> --repo owner/repo` — the diff
 - `gh pr checkout <N> --repo owner/repo` — optional, to read actual files
+- `gh api repos/{owner}/{repo}/issues/{N}/comments` — general PR comments
+- `gh api repos/{owner}/{repo}/pulls/{N}/comments` — inline review comments (line-anchored)
+- `gh api repos/{owner}/{repo}/pulls/{N}/reviews` — formal review submissions + verdicts
 
 **GitLab MR URL** (`https://gitlab.com/group/repo/-/merge_requests/N`):
-- `glab mr view <N> --output json` — get metadata **including state**
-- `glab mr diff <N>` — get the diff
+- `glab mr view <N> --output json` — metadata + state
+- `glab mr diff <N>` — the diff
+- `glab mr note list <N> -F json` — all discussions (general + inline diff notes)
 
 ## Step 1b: Check PR/MR state and frame accordingly
 
@@ -64,6 +68,40 @@ Behavior differs by state:
 >
 > Then proceed only if the user confirms. Don't issue a recommendation (there's
 > nothing to gate). Note the abandoned state in the summary.
+
+## Step 1c: Load existing comments and discussions
+
+Before reviewing, fetch the existing comment thread so you don't re-raise things already
+discussed, and so you have full context.
+
+**GitHub:**
+```bash
+gh api repos/{owner}/{repo}/issues/{N}/comments       # general comments
+gh api repos/{owner}/{repo}/pulls/{N}/comments        # inline review comments
+gh api repos/{owner}/{repo}/pulls/{N}/reviews         # formal review verdicts
+```
+
+**GitLab:**
+```bash
+glab mr note list <N> -F json                         # all discussions (general + diff notes)
+```
+
+**What to do with the thread:**
+
+- **Already discussed and resolved** — if a concern you would raise has already been
+  addressed in the thread (author responded, reviewer accepted), do not re-raise it.
+  Acknowledge it briefly if relevant: "I see this was already discussed in the thread."
+
+- **Open/unresolved thread on a line** — factor the existing discussion into your
+  reading. You may add a new observation, but don't repeat what's already been said.
+
+- **Verdicts and approvals (GitHub reviews)** — note if other reviewers have already
+  approved or requested changes. Frame your review as additive, not overriding.
+
+- **No existing comments** — proceed normally; this note step is a no-op.
+
+Do not summarize the entire comment thread unprompted. Use it as background context,
+surface it only when directly relevant to a finding.
 
 ## Step 2: Load project standards
 
@@ -161,4 +199,6 @@ and just answer directly. The template is for a full review pass, not every resp
 - Do not produce a structured CI-style report with tables and emoji headers
 - Do not post to GitHub/GitLab unless explicitly asked
 - Do not summarize or restate findings the user hasn't asked for
+- Do not re-raise findings already discussed and resolved in the comment thread
+- Do not summarize the entire comment thread unprompted — use it as background context
 - Do not invent problems — if you're unsure, say so and ask a clarifying question

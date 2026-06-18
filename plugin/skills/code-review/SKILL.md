@@ -194,6 +194,31 @@ Rules:
 For quick conversational exchanges (user asks a specific question), skip the template
 and just answer directly. The template is for a full review pass, not every response.
 
+## Resolving discussions when fixes are made
+
+When the user indicates something has been fixed ("that's addressed", "I fixed finding 3",
+"resolved"):
+
+**GitHub:**
+Regular PR comments cannot be resolved via the API — only inline review threads created
+via a formal review submission can, and only via the GraphQL `resolveReviewThread`
+mutation (complex, rarely worth it). For the common case, acknowledge verbally:
+> "Got it — I'll treat that as addressed. It won't appear in future reviews once the
+> fix lands in the diff."
+Do NOT attempt `gh api` calls to resolve GitHub comments — they will fail or have no
+effect for regular comments.
+
+**GitLab:**
+Discussions can be resolved. If the user asks, offer to resolve the relevant thread:
+```bash
+glab mr note resolve <discussion-id> -R owner/repo
+```
+The discussion ID comes from `glab mr note list -F json` (the `id` field on each
+discussion object). If you fetched discussions in Step 1c, you have the IDs already.
+Confirm with the user before resolving — resolving a thread is visible to all
+participants and may affect merge eligibility if the project requires all threads
+resolved before merging.
+
 ## What NOT to do
 
 - Do not produce a structured CI-style report with tables and emoji headers

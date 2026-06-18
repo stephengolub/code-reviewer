@@ -228,13 +228,13 @@ export const CodeReviewerPlugin = async (ctx) => {
             "Has access to the call_graph tool for structural analysis.",
           mode: "primary",
           tools: {
-            read: "allow",
-            glob: "allow",
-            grep: "allow",
-            bash: "allow",
-            webfetch: "allow",
-            lsp: "allow",
-            skill: "allow",
+            read: true,
+            glob: true,
+            grep: true,
+            bash: true,
+            webfetch: true,
+            lsp: true,
+            skill: true,
           },
           prompt: `You are an interactive code reviewer helping the user read and understand a diff.
 

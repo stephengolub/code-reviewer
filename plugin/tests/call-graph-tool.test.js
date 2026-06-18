@@ -183,6 +183,13 @@ describe("CodeReviewerPlugin — structure", () => {
     await plugin.config(cfg);
     assert.ok(cfg.agent?.["code-reviewer"], "should register code-reviewer agent");
     assert.ok(typeof cfg.agent["code-reviewer"].prompt === "string", "agent should have a prompt");
+    // tools values must be booleans, not strings — OpenCode rejects "allow"/"deny"
+    const tools = cfg.agent["code-reviewer"].tools;
+    if (tools) {
+      for (const [key, val] of Object.entries(tools)) {
+        assert.equal(typeof val, "boolean", `tools.${key} must be a boolean, got ${typeof val} ("${val}")`);
+      }
+    }
   });
 
   it("config hook does not overwrite a pre-existing code-reviewer agent", async () => {

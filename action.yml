@@ -112,15 +112,16 @@ runs:
           "permission": {
             "external_directory": {
               "/tmp/**": "allow"
+            },
+            "bash": {
+              "*": "allow",
+              "git commit *": "deny",
+              "git push *": "deny",
+              "git tag *": "deny"
             }
           }
         }
         EOF
-
-        # Configure git identity so if OpenCode attempts a git commit (e.g. as
-        # part of session cleanup) it doesn't fail with "Author identity unknown".
-        git config user.email "opencode-review[bot]@users.noreply.github.com"
-        git config user.name "opencode-review[bot]"
 
     - uses: anomalyco/opencode/github@latest
       env:
@@ -299,8 +300,10 @@ runs:
           Do NOT post inline line-anchored comments. All findings live in the tables
           above with file:line references.
 
-          Do NOT run git commit, git push, or any other git write command. Your only
-          output is the PR comment posted via gh api above. Nothing gets committed.
+          IMPORTANT: Do NOT run git commit, git push, git tag, or any git write
+          command under any circumstances. The repository is read-only for this job.
+          Your one and only output is the single PR comment posted via gh api above.
+          The job is complete the moment that comment is posted. Stop.
 
     - name: Prepare review artifacts
       if: always()

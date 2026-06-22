@@ -97,15 +97,10 @@ runs:
           echo "${{ inputs.api_key_env_var }}=${{ inputs.api_key }}" >> $GITHUB_ENV
         fi
 
-    - name: Configure OpenCode permissions and git identity
+    - name: Configure OpenCode permissions and harden git
       shell: bash
       run: |
         # Grant OpenCode permission to write to /tmp without interactive approval.
-        # The action prompt instructs OpenCode to write review output to /tmp/
-        # (e.g. /tmp/review-body.md). OpenCode's default external_directory
-        # permission is "ask" — which stalls indefinitely in CI since there is no
-        # human to approve it. Writing opencode.json here overrides that for the
-        # duration of this job only.
         cat > opencode.json << 'EOF'
         {
           "$schema": "https://opencode.ai/config.json",
@@ -122,6 +117,17 @@ runs:
           }
         }
         EOF
+
+        # Set git identity so commit attempts don't fail with "Author identity unknown"
+        # (exit 128). With identity set, the commit may succeed but push will be
+        # blocked by the repo's contents:read permission.
+        git config --global user.email "opencode-review[bot]@users.noreply.github.com"
+        git config --global user.name "opencode-review[bot]"
+
+        # Make .git read-only so git write operations physically cannot succeed.
+        # This is the most reliable way to prevent OpenCode from committing — it
+        # bypasses any prompt/config that might not be respected.
+        chmod -R a-w .git
 
     - uses: anomalyco/opencode/github@latest
       env:

@@ -97,41 +97,39 @@ runs:
           echo "${{ inputs.api_key_env_var }}=${{ inputs.api_key }}" >> $GITHUB_ENV
         fi
 
-    - name: Configure OpenCode permissions and harden git
+    - name: Configure OpenCode permissions
       shell: bash
       run: |
-        # Grant OpenCode permission to write to /tmp without interactive approval.
-        cat > opencode.json << 'EOF'
+        # Write the OpenCode config to /tmp so it does NOT dirty the working tree.
+        # Writing opencode.json into the repo directory causes branchIsDirty() in
+        # the OpenCode github action to detect an untracked file, triggering the
+        # post-session git commit + push flow (which then fails with identity errors
+        # or write-access errors). Using OPENCODE_CONFIG env var to point at /tmp
+        # keeps the working tree clean.
+        cat > /tmp/opencode-ci.json << 'EOF'
         {
           "$schema": "https://opencode.ai/config.json",
           "permission": {
             "external_directory": {
               "/tmp/**": "allow"
-            },
-            "bash": {
-              "*": "allow",
-              "git commit *": "deny",
-              "git push *": "deny",
-              "git tag *": "deny"
             }
           }
         }
         EOF
 
-        # Set git identity so commit attempts don't fail with "Author identity unknown"
-        # (exit 128). With identity set, the commit may succeed but push will be
-        # blocked by the repo's contents:read permission.
-        git config --global user.email "opencode-review[bot]@users.noreply.github.com"
-        git config --global user.name "opencode-review[bot]"
-
-        # Make .git read-only so git write operations physically cannot succeed.
-        # This is the most reliable way to prevent OpenCode from committing — it
-        # bypasses any prompt/config that might not be respected.
-        chmod -R a-w .git
+        # Set LOCAL git identity — assertGitIdentityConfigured() in the OpenCode
+        # github action reads local config only (git config --get user.name).
+        # If identity is set, branchIsDirty() still runs but the commit won't fail
+        # with "Author identity unknown"; push will then fail with contents:read
+        # permission error. Setting identity here in case the dirty-branch path
+        # is triggered by something we can't control.
+        git config user.email "opencode-review[bot]@users.noreply.github.com"
+        git config user.name "opencode-review[bot]"
 
     - uses: anomalyco/opencode/github@latest
       env:
         GITHUB_TOKEN: ${{ inputs.github_token }}
+        OPENCODE_CONFIG: /tmp/opencode-ci.json
       with:
         model: ${{ inputs.model }}
         use_github_token: true
